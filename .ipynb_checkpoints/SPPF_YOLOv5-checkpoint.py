@@ -54,18 +54,18 @@ def main():
     print(torch.equal(output1, output2))
     
     t_start = time.time()
-    for _ in range(100):
+    for _ in range(1000):
         spp_test(input_tensor)
-    print(f"spp time: {time.time() - t_start}")
+    print(f"spp test time: {time.time() - t_start}")
 
 
     t_start = time.time()
-    for _ in range(100):
+    for _ in range(1000):
         spp(input_tensor)
     print(f"spp time: {time.time() - t_start}")
 
     t_start = time.time()
-    for _ in range(100):
+    for _ in range(1000):
         sppf(input_tensor)
     print(f"sppf time: {time.time() - t_start}")
 

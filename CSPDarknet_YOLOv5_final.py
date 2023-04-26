@@ -55,6 +55,9 @@ class CSPDarknet(nn.Module):
                     ConvBNSiLU(c1, c2, 6, 2, 2),
                     ConvBNSiLU(c2, c2*2, 3, 2, 1)
                 )
+        self.focus_old = nn.Sequential(
+                    
+        )
         self.firstC3 = C3(c2*2, c2*2, 1, 1, 0, int(3*0.33))
         self.inter_conv_1 = ConvBNSiLU(c2*2, c2*4, 3, 2, 1)
         self.secondC3 = C3(c2*4, c2*4, 1, 1, 0, int(6*0.33))
@@ -65,8 +68,10 @@ class CSPDarknet(nn.Module):
         
         self.classifier = nn.Sequential(
             nn.Flatten(),
-            nn.Linear(int(c2*16)*4, 3),
-            #nn.Linear(102400, 3)
+            #nn.Linear(int(c2*16)*16*4*4, 3)
+            #nn.Linear(256, 3)
+            #nn.Linear(int(c2*16)*4, 3),
+            nn.Linear(102400, 3)
         )
 
     def forward(self, x):
@@ -76,23 +81,27 @@ class CSPDarknet(nn.Module):
 
 if __name__ == "__main__":
     print("CSPDarknet - Yolov5 modified version")
-    device = torch.device("cuda:0")
-    if torch.cuda.is_available():
-        print("cuda")
+    device = torch.device("cuda:1")
+    warmup = 3
         
     bn = BottleNeck(3, 64)
     CSP = CSPDarknet(3, 16)
     
-    dummy = torch.randn(1, 3, 64,64)
-    CSP.eval()
-    CSP(dummy)
+    benchmark_size = [32, 64, 128, 256, 512]
     
-    #CSP = CSP.to(device)
-    #dummy = dummy.to(device)
+    dummy = torch.randn(1, 3, 640,640)
+    
+    
+    CSP = CSP.to(device)
+    dummy = dummy.to(device)
+    CSP.eval()
+    for _ in range(warmup):
+        CSP(dummy)
+    
     
     print("start")
     t_start = time.time()
-    for _ in range(2000):
+    for _ in range(1000):
         CSP(dummy)
         
     print(f"CSP time: {time.time() - t_start}")
