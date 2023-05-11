@@ -76,7 +76,7 @@ class Darknet53(nn.Module):
             )
             c2 = c2*2
         
-        #self.blocks.append(make_dark_residual_block(int(4*depth), c2))
+        self.blocks.append(make_dark_residual_block(int(4*depth), c2))
         self.blocks = nn.Sequential(*self.blocks)
     def forward(self, x):
         return self.blocks(x)
@@ -86,7 +86,7 @@ class Darknet53(nn.Module):
         
 
 def main():
-    device = "cuda:1"
+    device = "cpu"
     input_ = torch.randn(1, 3, 640, 640).to(device)
     c = make_dark_residual_block(4, 32).to(device).eval()
     c(torch.randn(1, 32, 208, 208).to(device))

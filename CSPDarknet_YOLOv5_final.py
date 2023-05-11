@@ -6,7 +6,8 @@ def ConvBNSiLU(c1, c2, k, s, p):
     return nn.Sequential(
             nn.Conv2d(c1, c2, k, s, p),
             nn.BatchNorm2d(c2),
-            nn.SiLU(),
+            #nn.SiLU(),
+            nn.ReLU()
             )
 
 def BottleNeck_architecture(c1, c2):
@@ -55,9 +56,7 @@ class CSPDarknet(nn.Module):
                     ConvBNSiLU(c1, c2, 6, 2, 2),
                     ConvBNSiLU(c2, c2*2, 3, 2, 1)
                 )
-        self.focus_old = nn.Sequential(
-                    
-        )
+        
         self.firstC3 = C3(c2*2, c2*2, 1, 1, 0, int(3*0.33))
         self.inter_conv_1 = ConvBNSiLU(c2*2, c2*4, 3, 2, 1)
         self.secondC3 = C3(c2*4, c2*4, 1, 1, 0, int(6*0.33))
@@ -71,17 +70,49 @@ class CSPDarknet(nn.Module):
             #nn.Linear(int(c2*16)*16*4*4, 3)
             #nn.Linear(256, 3)
             #nn.Linear(int(c2*16)*4, 3),
-            nn.Linear(102400, 3)
+            nn.Linear(102400, 1000),
+            #nn.Linear(2304, 3)
         )
 
     def forward(self, x):
         backbone = self.lastC3(self.inter_conv_last(self.thirdC3(self.inter_conv_2(self.secondC3(self.inter_conv_1(self.firstC3(self.focus(x))))))))
         return self.classifier(backbone)
+    
+class batch_CSPDarknet(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.cut = int(640/8)
+        
+        self.conv1 = CSPDarknet(3, 16)
+        
+    def forward(self, x):
+        #x = torch.split(x, self.num_batch, dim=2)
+        x = x.unfold(2, self.cut, self.cut).unfold(3, self.cut, self.cut).contiguous().view(-1, 3, self.cut, self.cut)
+        #print(x[0].shape)
+        #for i in range(self.num_batch):
+        #    _ = self.layer[i](x[i])
+        y = torch.randn(1, 3).to("cuda:4")
+        for batch in x:
+            batch = batch.unsqueeze(0)
+            y += self.conv1(batch)
+        y = torch.div(y, len(x))
+        return y
+    
+def test_2():
+    csp = batch_CSPDarknet()#.to("cuda:1")
+    dummy = torch.randn(1, 3, 80, 80)#.to("cuda:1")
+    
+    print("start")
+    t_start = time.time()
+    for _ in range(1000):
+        csp(dummy)
+        
+    print(f"CSP time: {time.time() - t_start}")
+            
 
-
-if __name__ == "__main__":
+def test_1():
     print("CSPDarknet - Yolov5 modified version")
-    device = torch.device("cuda:1")
+    device = torch.device("cpu")
     warmup = 3
         
     bn = BottleNeck(3, 64)
@@ -105,6 +136,12 @@ if __name__ == "__main__":
         CSP(dummy)
         
     print(f"CSP time: {time.time() - t_start}")
+    
+
+    
+        
+if __name__ == "__main__":
+    test_2()
 
     
 

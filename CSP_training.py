@@ -1,5 +1,5 @@
 import torch
-from CSPDarknet_YOLOv5_test import *
+from CSPDarknet_YOLOv5_final import *
 import requests
 import zipfile
 from pathlib import Path
@@ -60,9 +60,10 @@ def train_step(model: torch.nn.Module,
     
     # Setup train loss and train accuracy values
     train_loss, train_acc = 0, 0
-    
+    print("Train step")
     # Loop through data loader data batches
     for batch, (X, y) in enumerate(dataloader):
+        
         # Send data to target device
         X, y = X.to(device), y.to(device)
 
@@ -99,26 +100,33 @@ def test_step(model: torch.nn.Module,
     # Put model in eval mode
     model.eval() 
     
+    """torch.save(model, "csp.pt")
+    torch.onnx.export(model.to("cpu"), torch.randn(1, 3, 640, 640).to("cpu"), "batch_csp_640.onnx", export_params=True, do_constant_folding=True)
+    model.to(device)"""
     # Setup test loss and test accuracy values
     test_loss, test_acc = 0, 0
-    
+    print("test step")
     # Turn on inference context manager
     with torch.inference_mode():
         # Loop through DataLoader batches
         for batch, (X, y) in enumerate(dataloader):
-            # Send data to target device
-            X, y = X.to(device), y.to(device)
-    
-            # 1. Forward pass
-            test_pred_logits = model(X)
+            try:
+                #print(f"Batch test: {batch}") 
+                # Send data to target device
+                X, y = X.to(device), y.to(device)
 
-            # 2. Calculate and accumulate loss
-            loss = loss_fn(test_pred_logits, y)
-            test_loss += loss.item()
-            
-            # Calculate and accumulate accuracy
-            test_pred_labels = test_pred_logits.argmax(dim=1)
-            test_acc += ((test_pred_labels == y).sum().item()/len(test_pred_labels))
+                # 1. Forward pass
+                test_pred_logits = model(X)
+
+                # 2. Calculate and accumulate loss
+                loss = loss_fn(test_pred_logits, y)
+                test_loss += loss.item()
+
+                # Calculate and accumulate accuracy
+                test_pred_labels = test_pred_logits.argmax(dim=1)
+                test_acc += ((test_pred_labels == y).sum().item()/len(test_pred_labels))
+            except:
+                print("error")
             
     # Adjust metrics to get average loss and accuracy per batch 
     test_loss = test_loss / len(dataloader)
@@ -158,7 +166,7 @@ def train(model: torch.nn.Module,
             f"test_loss: {test_loss:.4f} | "
             f"test_acc: {test_acc:.4f}"
         )
-
+        
         # 5. Update results dictionary
         results["train_loss"].append(train_loss)
         results["train_acc"].append(train_acc)
